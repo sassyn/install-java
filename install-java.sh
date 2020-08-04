@@ -173,51 +173,28 @@ elif [[ $jdk_dir =~ ^jdk1\.8.* ]]; then
 fi
 
 if [[ -f $unlimited_jce_policy_dist ]]; then
-    if (confirm "Install Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files?"); then
-        echo "Extracting policy jars in $unlimited_jce_policy_dist to $extracted_dirname/jre/lib/security"
-        unzip -j -o $unlimited_jce_policy_dist *.jar -d $extracted_dirname/jre/lib/security
-    fi
+   echo "Extracting policy jars in $unlimited_jce_policy_dist to $extracted_dirname/jre/lib/security"
+   unzip -j -o $unlimited_jce_policy_dist *.jar -d $extracted_dirname/jre/lib/security
 fi
 
 # Run update-alternatives commands
-if (confirm "Run update-alternatives commands?"); then
-    echo "Running update-alternatives..."
-    cmd="update-alternatives --install /usr/bin/java java $extracted_dirname/bin/java 10000"
-    declare -a commands=($(ls -1 ${extracted_dirname}/bin | grep -v ^java$))
-    for command in "${commands[@]}"; do
-        command_path=$extracted_dirname/bin/$command
-        if [[ -x $command_path ]]; then
-            cmd="$cmd --slave /usr/bin/$command $command $command_path"
-        fi
-    done
-    lib_path=$extracted_dirname/jre/lib/amd64/libnpjp2.so
-    if [[ -d "/usr/lib/mozilla/plugins/" ]] && [[ -f $lib_path ]]; then
-        cmd="$cmd --slave /usr/lib/mozilla/plugins/libjavaplugin.so mozilla-javaplugin.so $lib_path"
-    fi
-    echo $cmd
-    # Execute command
-    $cmd
-    update-alternatives --set java $extracted_dirname/bin/java
+echo "Running update-alternatives..."
+cmd="update-alternatives --install /usr/bin/java java $extracted_dirname/bin/java 10000"
+declare -a commands=($(ls -1 ${extracted_dirname}/bin | grep -v ^java$))
+for command in "${commands[@]}"; do
+    command_path=$extracted_dirname/bin/$command
+     if [[ -x $command_path ]]; then
+         cmd="$cmd --slave /usr/bin/$command $command $command_path"
+     fi
+done
+lib_path=$extracted_dirname/jre/lib/amd64/libnpjp2.so
+if [[ -d "/usr/lib/mozilla/plugins/" ]] && [[ -f $lib_path ]]; then
+     cmd="$cmd --slave /usr/lib/mozilla/plugins/libjavaplugin.so mozilla-javaplugin.so $lib_path"
 fi
-
-# Create system preferences directory
-java_system_prefs_dir="/etc/.java/.systemPrefs"
-if [[ ! -d $java_system_prefs_dir ]]; then
-    if (confirm "Create Java System Prefs Directory ($java_system_prefs_dir) and change ownership to $SUDO_USER:$SUDO_USER?"); then
-        echo "Creating $java_system_prefs_dir"
-        mkdir -p $java_system_prefs_dir
-        chown -R $SUDO_USER:$SUDO_USER $java_system_prefs_dir
-    fi
-fi
-
-if (confirm "Do you want to set JAVA_HOME environment variable in $HOME/.bashrc?"); then
-    if grep -q "export JAVA_HOME=.*" $HOME/.bashrc; then
-        sed -i "s|export JAVA_HOME=.*|export JAVA_HOME=$extracted_dirname|" $HOME/.bashrc
-    else
-        echo "export JAVA_HOME=$extracted_dirname" >>$HOME/.bashrc
-    fi
-    source $HOME/.bashrc
-fi
+echo $cmd
+# Execute command
+$cmd
+update-alternatives --set java $extracted_dirname/bin/java
 
 applications_dir="$HOME/.local/share/applications"
 
